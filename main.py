@@ -416,6 +416,21 @@
 #     import uvicorn
 #     uvicorn.run(app, host='0.0.0.0', port=8000)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import os
 import logging
 import re
@@ -523,11 +538,49 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
     return store[session_id]
 
 
+# @app.post("/upload-pdf")
+# async def upload_pdf(file: UploadFile = File(...)):
+#     global vectorstore
+
+#     try:
+#         # Save the uploaded file to a temporary file
+#         with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+#             temp_file.write(file.file.read())
+#             temp_file_path = temp_file.name
+
+#         # Load the PDF
+#         loader = PyMuPDFLoader(temp_file_path)
+#         docs = loader.load()
+
+#         # Process the document
+#         document_text = " ".join(doc.page_content for doc in docs)
+#         chunks = split_by_headings(document_text, headers)
+
+#         # Convert chunks into Document objects
+#         splits = [
+#             Document(page_content=chunk["content"],
+#                      metadata={"heading": chunk["heading"]})
+#             for chunk in chunks
+#         ]
+
+#         # Create the vectorstore
+#         vectorstore = Chroma.from_documents(documents=splits,
+#                                             embedding=OpenAIEmbeddings())
+#         return {"message": "PDF uploaded and processed successfully."}
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     global vectorstore
 
     try:
+        # Clear any previous session data (vectorstore)
+        vectorstore = None  # Reset the vectorstore to clear the previous document's embeddings
+
         # Save the uploaded file to a temporary file
         with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
             temp_file.write(file.file.read())
@@ -548,9 +601,13 @@ async def upload_pdf(file: UploadFile = File(...)):
             for chunk in chunks
         ]
 
-        # Create the vectorstore
+        # Create the vectorstore (reinitialize it)
         vectorstore = Chroma.from_documents(documents=splits,
                                             embedding=OpenAIEmbeddings())
+
+        # Optionally, delete the temporary file after processing
+        os.remove(temp_file_path)
+
         return {"message": "PDF uploaded and processed successfully."}
 
     except Exception as e:
